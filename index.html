@@ -296,7 +296,7 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.6;}
 .toast{position:fixed;bottom:24px;right:24px;background:#111111;color:#fff;padding:12px 18px;border-radius:var(--rs);font-size:13px;font-weight:600;z-index:2000;opacity:0;transform:translateY(8px);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.3);}
 .toast.show{opacity:1;transform:translateY(0);pointer-events:auto;}
 /* 커스텀 확인 다이얼로그 */
-.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:10000;display:flex;align-items:center;justify-content:center;}
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:99999;display:flex;align-items:center;justify-content:center;}
 .confirm-box{background:var(--surface);border-radius:14px;padding:24px;max-width:320px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2);text-align:center;}
 .confirm-msg{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;}
 .confirm-sub{font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.5;}
@@ -717,8 +717,8 @@ textarea.fi{resize:vertical;min-height:64px;line-height:1.6;}
     <div class="confirm-msg" id="confirm-msg">삭제하시겠습니까?</div>
     <div class="confirm-sub" id="confirm-sub">이 작업은 되돌릴 수 없습니다</div>
     <div class="confirm-btns">
-      <button class="btn" id="confirm-cancel" onclick="closeConfirm()">취소</button>
-      <button class="btn btn-danger" id="confirm-ok" onclick="resolveConfirm(true)" style="background:var(--red);color:#fff;border-color:var(--red)">삭제</button>
+      <button type="button" class="btn" id="confirm-cancel">취소</button>
+      <button type="button" class="btn btn-danger" id="confirm-ok" style="background:var(--red);color:#fff;border-color:var(--red)">삭제</button>
     </div>
   </div>
 </div>
@@ -998,7 +998,7 @@ function renderOvChecklist(){
       :`<div style="display:flex;flex-direction:column;gap:5px">${D.collab.map(item=>`
         <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border-radius:var(--rs);border:1px solid var(--border)">
           <div class="cl-cb ${item.done?'on-report':''}" style="${item.done?'background:var(--blue-mid);border-color:var(--blue-mid)':''}" onclick="toggleCollab('${item.id}')">${item.done?`<i class="ti ti-check" style="font-size:9px;color:#fff"></i>`:''}</div>
-          <div style="flex:1;min-width:0">
+          <div style="flex:1;min-width:0" data-collab-id="${item.id}">
             <div style="font-size:12px;font-weight:500;${item.done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)'}" ondblclick="editCollabItem('${item.id}')" title="더블클릭하여 편집">${esc(item.text)}</div>
             <div style="font-size:10px;color:var(--text3);margin-top:2px">${[item.dept,item.deadline].filter(Boolean).join(' · ')}</div>
           </div>
@@ -2249,15 +2249,29 @@ function openModal(type, id){
 
 function editCollabItem(id){
   const item=D.collab?.find(i=>i.id===id); if(!item) return;
-  const el=document.getElementById('collab-item-'+id);
-  // id가 없으면 팝업 모달로 편집
-  const text=prompt('요청 내용 수정:', item.text);
-  if(text===null) return;
-  if(text.trim()) item.text=text.trim();
-  const dept=prompt('요청 부서:', item.dept||'');
-  if(dept!==null) item.dept=dept.trim();
-  const dl=prompt('요청 기한 (YYYY-MM-DD):', item.deadline||'');
-  if(dl!==null) item.deadline=dl.trim();
+  const el=document.querySelector(`[data-collab-id="${id}"]`); if(!el) return;
+  el.innerHTML=`
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+      <input class="cl-add-input" id="cedit-text-${id}" value="${esc(item.text)}" placeholder="요청 내용" style="margin-bottom:0"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();saveCollabEdit('${id}');}if(event.key==='Escape'){renderOvChecklist();}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <input class="cl-add-input" id="cedit-dept-${id}" value="${esc(item.dept||'')}" placeholder="요청 부서" style="margin-bottom:0">
+        <input class="cl-add-input" id="cedit-dl-${id}" type="date" value="${item.deadline||''}" style="margin-bottom:0;font-family:'IBM Plex Mono',monospace;font-size:11px">
+      </div>
+      <div style="display:flex;gap:5px;justify-content:flex-end">
+        <button class="btn btn-xs btn-ghost" onclick="renderOvChecklist()">취소</button>
+        <button class="btn btn-xs btn-primary" style="background:#111;border-color:#111" onclick="saveCollabEdit('${id}')">저장</button>
+      </div>
+    </div>`;
+  document.getElementById('cedit-text-'+id)?.focus();
+}
+function saveCollabEdit(id){
+  const item=D.collab?.find(i=>i.id===id); if(!item) return;
+  const text=document.getElementById('cedit-text-'+id)?.value.trim();
+  if(!text) return toast('내용을 입력해주세요');
+  item.text=text;
+  item.dept=document.getElementById('cedit-dept-'+id)?.value.trim()||'';
+  item.deadline=document.getElementById('cedit-dl-'+id)?.value||'';
   save(); renderOvChecklist(); toast('수정됐습니다');
 }
 function saveCollab(){
@@ -2907,19 +2921,18 @@ document.addEventListener('click', e=>{
   }
 });
 
-// ── 커스텀 확인 다이얼로그 ──
-let _confirmResolve = null;
-function showConfirm(msg, sub=''){
-  return new Promise(resolve=>{
-    _confirmResolve = resolve;
-    document.getElementById('confirm-msg').textContent = msg;
-    document.getElementById('confirm-sub').textContent = sub||'';
-    document.getElementById('confirm-overlay').style.display='flex';
-  });
+// ── 커스텀 확인 다이얼로그 (콜백 방식) ──
+let _confirmCallback = null;
+function showConfirm(msg, sub='', btnText='삭제'){
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-sub').textContent = sub||'';
+  document.getElementById('confirm-ok').textContent = btnText;
+  document.getElementById('confirm-overlay').style.display='flex';
 }
 function resolveConfirm(val){
   document.getElementById('confirm-overlay').style.display='none';
-  if(_confirmResolve){ _confirmResolve(val); _confirmResolve=null; }
+  if(val && _confirmCallback){ const cb=_confirmCallback; _confirmCallback=null; cb(); }
+  else _confirmCallback=null;
 }
 function closeConfirm(){ resolveConfirm(false); }
 
@@ -2950,65 +2963,73 @@ function doUndo(){
 }
 
 // ── 삭제 함수 (커스텀 confirm + undo) ──
-async function deleteTask(id){
-  const ok=await showConfirm('과업을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'과업 삭제');
-  const t=D.tasks.find(x=>x.id===id); const pid=t?t.pid:null;
-  D.tasks=D.tasks.filter(x=>x.id!==id);
-  if(pid){autoProgress(pid);save();rebuildTbody(pid);}else save();
-  renderToday(); syncOv(); showUndoToast('과업이 삭제됐습니다');
+function deleteTask(id){
+  showConfirm('과업을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'과업 삭제');
+    const t=D.tasks.find(x=>x.id===id); const pid=t?t.pid:null;
+    D.tasks=D.tasks.filter(x=>x.id!==id);
+    if(pid){autoProgress(pid);save();rebuildTbody(pid);}else save();
+    renderToday(); syncOv(); showUndoToast('과업이 삭제됐습니다');
+  };
 }
-async function deleteProject(pid){
-  const ok=await showConfirm('사업을 삭제하시겠습니까?','관련 과업도 모두 삭제됩니다. 삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'사업 삭제');
-  D.projects=D.projects.filter(p=>p.id!==pid); D.tasks=D.tasks.filter(t=>t.pid!==pid);
-  if(openPid===pid) openPid=null;
-  save(); renderProjects(); renderOverview(); renderToday(); showUndoToast('사업이 삭제됐습니다');
+function deleteProject(pid){
+  showConfirm('사업을 삭제하시겠습니까?','관련 과업도 모두 삭제됩니다. 삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'사업 삭제');
+    D.projects=D.projects.filter(p=>p.id!==pid); D.tasks=D.tasks.filter(t=>t.pid!==pid);
+    if(openPid===pid) openPid=null;
+    save(); renderProjects(); renderOverview(); renderToday(); showUndoToast('사업이 삭제됐습니다');
+  };
 }
-async function deleteIssueItem(pid, issId){
-  const ok=await showConfirm('현안을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'현안 삭제');
-  const p=D.projects.find(x=>x.id===pid); if(!p) return;
-  p.issues=(p.issues||[]).filter(i=>i.id!==issId);
-  save(); rebuildIssueList(pid); showUndoToast('현안이 삭제됐습니다');
+function deleteIssueItem(pid, issId){
+  showConfirm('현안을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'현안 삭제');
+    const p=D.projects.find(x=>x.id===pid); if(!p) return;
+    p.issues=(p.issues||[]).filter(i=>i.id!==issId);
+    save(); rebuildIssueList(pid); showUndoToast('현안이 삭제됐습니다');
+  };
 }
-async function deleteMemberGoal(mid,gid){
-  const ok=await showConfirm('성과목표를 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'성과목표 삭제');
-  const m=D.members.find(x=>x.id===mid); if(!m) return;
-  m.goals=(m.goals||[]).filter(g=>g.id!==gid); save(); rebuildMemberGoalList(mid); showUndoToast('성과목표가 삭제됐습니다');
+function deleteMemberGoal(mid,gid){
+  showConfirm('성과목표를 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'성과목표 삭제');
+    const m=D.members.find(x=>x.id===mid); if(!m) return;
+    m.goals=(m.goals||[]).filter(g=>g.id!==gid); save(); rebuildMemberGoalList(mid); showUndoToast('성과목표가 삭제됐습니다');
+  };
 }
-async function deleteMember(id){
-  const ok=await showConfirm('팀원을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'팀원 삭제');
-  D.members=D.members.filter(m=>m.id!==id); save(); renderMembers(); showUndoToast('팀원이 삭제됐습니다');
+function deleteMember(id){
+  showConfirm('팀원을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'팀원 삭제');
+    D.members=D.members.filter(m=>m.id!==id); save(); renderMembers(); showUndoToast('팀원이 삭제됐습니다');
+  };
 }
-async function deleteCollab(id){
-  const ok=await showConfirm('협조 요청 항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'협조요청 삭제');
-  if(!D.collab) D.collab=[];
-  D.collab=D.collab.filter(i=>i.id!==id); save(); renderOvChecklist(); syncOv(); showUndoToast('협조 요청이 삭제됐습니다');
+function deleteCollab(id){
+  showConfirm('협조 요청 항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'협조요청 삭제');
+    if(!D.collab) D.collab=[];
+    D.collab=D.collab.filter(i=>i.id!==id); save(); renderOvChecklist(); syncOv(); showUndoToast('협조 요청이 삭제됐습니다');
+  };
 }
-async function deleteSimpleCl(type, id){
-  const ok=await showConfirm('항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
-  if(!ok) return;
-  saveUndo(D,'항목 삭제');
-  D[type]=D[type].filter(i=>i.id!==id); save();
-  if(type==='report') renderReport(); else renderNotice();
-  updateClBadges(); showUndoToast('항목이 삭제됐습니다');
+function deleteSimpleCl(type, id){
+  showConfirm('항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
+  _confirmCallback=()=>{
+    saveUndo(D,'항목 삭제');
+    D[type]=D[type].filter(i=>i.id!==id); save();
+    if(type==='report') renderReport(); else renderNotice();
+    updateClBadges(); showUndoToast('항목이 삭제됐습니다');
+  };
 }
-async function deleteTodayTask(id){
-  const ok=await showConfirm('오늘 할 일에서 제거하시겠습니까?','프로젝트 관리 항목은 유지됩니다');
-  if(!ok) return;
-  const t=D.tasks.find(x=>x.id===id); if(!t) return;
-  t.todayTodo=false; t.todayDone=false;
-  save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
+function deleteTodayTask(id){
+  showConfirm('오늘 할 일에서 제거하시겠습니까?','프로젝트 관리 항목은 유지됩니다','제거');
+  _confirmCallback=()=>{
+    const t=D.tasks.find(x=>x.id===id); if(!t) return;
+    t.todayTodo=false; t.todayDone=false;
+    save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
+  };
 }
 
 // ── 추진 내용 텍스트 선택 허용 (proj-block draggable 일시 해제) ──
@@ -3078,9 +3099,36 @@ function doSignOut(){
 }
 
 // 로그인 상태 변화 처리
+// ── 허용 이메일 ──
+const ALLOWED_EMAIL = 'jihoe1125@gmail.com';
+
+// ── 10분 비활동 자동 로그아웃 ──
+let _inactiveTimer = null;
+const INACTIVE_MS = 10 * 60 * 1000; // 10분
+function resetInactiveTimer(){
+  clearTimeout(_inactiveTimer);
+  _inactiveTimer = setTimeout(()=>{
+    if(window._fbUser){
+      toast('10분 비활동으로 자동 로그아웃됩니다');
+      setTimeout(()=>{ window._fbSignOut && window._fbSignOut(); }, 1500);
+    }
+  }, INACTIVE_MS);
+}
+['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(ev=>{
+  document.addEventListener(ev, resetInactiveTimer, {passive:true});
+});
+
 window.addEventListener('auth-change', e=>{
   const user = e.detail;
   if(user){
+    // 허용된 이메일인지 확인
+    if(user.email !== ALLOWED_EMAIL){
+      const ls=document.getElementById('login-screen');
+      if(ls){ ls.innerHTML=`<div style="text-align:center;padding:20px"><div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:8px">접근 권한 없음</div><div style="font-size:13px;color:var(--text3);margin-bottom:16px">허용되지 않은 계정입니다</div><button class="btn" onclick="doSignOut()">다른 계정으로 로그인</button></div>`; ls.style.display='flex'; }
+      document.getElementById('app').style.display='none';
+      window._fbSignOut && window._fbSignOut();
+      return;
+    }
     // 로그인됨 → 앱 표시
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='flex';
@@ -3089,9 +3137,12 @@ window.addEventListener('auth-change', e=>{
     const name=document.getElementById('user-name');
     if(photo && user.photoURL){ photo.src=user.photoURL; photo.style.display=''; }
     if(name) name.textContent=user.displayName||user.email||'';
+    // 비활동 타이머 시작
+    resetInactiveTimer();
     // 앱 초기화 (아직 안 됐으면)
     if(!window._appInited){ window._appInited=true; initApp(); }
   } else {
+    clearTimeout(_inactiveTimer);
     // 로그아웃됨 → 로그인 화면 복원
     const ls=document.getElementById('login-screen');
     if(ls){ ls.innerHTML=_loginBtnHTML(); ls.style.display='flex'; }
@@ -3149,6 +3200,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // 로그인/로그아웃 버튼 이벤트 바인딩
   document.getElementById('login-btn')?.addEventListener('click', ()=>doSignIn());
   document.getElementById('logout-btn')?.addEventListener('click', ()=>doSignOut());
+  document.getElementById('confirm-ok')?.addEventListener('click', ()=>resolveConfirm(true));
+  document.getElementById('confirm-cancel')?.addEventListener('click', ()=>resolveConfirm(false));
   const lb=document.getElementById('login-btn');
   if(lb) lb.innerHTML=`<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.34-8.16 2.34-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Google 계정으로 로그인`;
 
