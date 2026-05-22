@@ -3039,12 +3039,9 @@ function deleteSimpleCl(type, id){
   showConfirm('항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteTodayTask(id){
-  window.__confirmCb=function(){
-    const t=D.tasks.find(x=>x.id===id); if(!t) return;
-    t.todayTodo=false; t.todayDone=false;
-    save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
-  };
-  showConfirm('오늘 할 일에서 제거하시겠습니까?','프로젝트 관리 항목은 유지됩니다','제거');
+  const t=D.tasks.find(x=>x.id===id); if(!t) return;
+  t.todayTodo=false; t.todayDone=false;
+  save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
 }
 
 // ── 추진 내용 텍스트 선택 허용 (proj-block draggable 일시 해제) ──
