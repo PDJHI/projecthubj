@@ -888,9 +888,11 @@ function ptasks(pid){ return D.tasks.filter(t=>t.pid===pid); }
 function todayList(){
   const today=getToday();
   return D.tasks.filter(t=>
-    t.todayTodo ||
-    (t.deadline && t.deadline<=today && !t.done) ||
-    (t.instructDate && t.instructDate===today && !t.done)
+    !t.todayExcluded && (
+      t.todayTodo ||
+      (t.deadline && t.deadline<=today && !t.done) ||
+      (t.instructDate && t.instructDate===today && !t.done)
+    )
   );
 }
 function taskAssignees(t){ return Array.isArray(t.assignees)?t.assignees:(t.assignee?t.assignee.split(',').map(s=>s.trim()).filter(Boolean):[]);}
@@ -2784,6 +2786,7 @@ function migrateData(p){
     if(!t.assignees)    t.assignees    = t.assignee ? t.assignee.split(',').map(s=>s.trim()).filter(Boolean) : [];
     if(t.todayDone===undefined) t.todayDone = false;
     if(t.priority===undefined) t.priority = 2;
+    if(t.todayExcluded===undefined) t.todayExcluded = false;
   });
   p.projects.forEach(pr=>{
     if(!pr.goals){
@@ -3040,7 +3043,7 @@ function deleteSimpleCl(type, id){
 }
 function deleteTodayTask(id){
   const t=D.tasks.find(x=>x.id===id); if(!t) return;
-  t.todayTodo=false; t.todayDone=false;
+  t.todayTodo=false; t.todayDone=false; t.todayExcluded=true;
   save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
 }
 
