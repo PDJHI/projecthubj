@@ -2966,7 +2966,6 @@ function doUndo(){
 
 // ── 삭제 함수 (커스텀 confirm + undo) ──
 function deleteTask(id){
-  showConfirm('과업을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'과업 삭제');
     const t=D.tasks.find(x=>x.id===id); const pid=t?t.pid:null;
@@ -2974,64 +2973,65 @@ function deleteTask(id){
     if(pid){autoProgress(pid);save();rebuildTbody(pid);}else save();
     renderToday(); syncOv(); showUndoToast('과업이 삭제됐습니다');
   };
+  showConfirm('과업을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteProject(pid){
-  showConfirm('사업을 삭제하시겠습니까?','관련 과업도 모두 삭제됩니다. 삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'사업 삭제');
     D.projects=D.projects.filter(p=>p.id!==pid); D.tasks=D.tasks.filter(t=>t.pid!==pid);
     if(openPid===pid) openPid=null;
     save(); renderProjects(); renderOverview(); renderToday(); showUndoToast('사업이 삭제됐습니다');
   };
+  showConfirm('사업을 삭제하시겠습니까?','관련 과업도 모두 삭제됩니다. 삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteIssueItem(pid, issId){
-  showConfirm('현안을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'현안 삭제');
     const p=D.projects.find(x=>x.id===pid); if(!p) return;
     p.issues=(p.issues||[]).filter(i=>i.id!==issId);
     save(); rebuildIssueList(pid); showUndoToast('현안이 삭제됐습니다');
   };
+  showConfirm('현안을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteMemberGoal(mid,gid){
-  showConfirm('성과목표를 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'성과목표 삭제');
     const m=D.members.find(x=>x.id===mid); if(!m) return;
     m.goals=(m.goals||[]).filter(g=>g.id!==gid); save(); rebuildMemberGoalList(mid); showUndoToast('성과목표가 삭제됐습니다');
   };
+  showConfirm('성과목표를 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteMember(id){
-  showConfirm('팀원을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'팀원 삭제');
     D.members=D.members.filter(m=>m.id!==id); save(); renderMembers(); showUndoToast('팀원이 삭제됐습니다');
   };
+  showConfirm('팀원을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteCollab(id){
-  showConfirm('협조 요청 항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'협조요청 삭제');
     if(!D.collab) D.collab=[];
     D.collab=D.collab.filter(i=>i.id!==id); save(); renderOvChecklist(); syncOv(); showUndoToast('협조 요청이 삭제됐습니다');
   };
+  showConfirm('협조 요청 항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteSimpleCl(type, id){
-  showConfirm('항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
   _confirmCallback=()=>{
     saveUndo(D,'항목 삭제');
     D[type]=D[type].filter(i=>i.id!==id); save();
     if(type==='report') renderReport(); else renderNotice();
     updateClBadges(); showUndoToast('항목이 삭제됐습니다');
   };
+  showConfirm('항목을 삭제하시겠습니까?','삭제 후 5초 내 실행 취소 가능합니다');
 }
 function deleteTodayTask(id){
-  showConfirm('오늘 할 일에서 제거하시겠습니까?','프로젝트 관리 항목은 유지됩니다','제거');
   _confirmCallback=()=>{
     const t=D.tasks.find(x=>x.id===id); if(!t) return;
     t.todayTodo=false; t.todayDone=false;
     save(); renderToday(); toast('오늘 할 일에서 제거됐습니다');
   };
+  showConfirm('오늘 할 일에서 제거하시겠습니까?','프로젝트 관리 항목은 유지됩니다','제거');
 }
 
 // ── 추진 내용 텍스트 선택 허용 (proj-block draggable 일시 해제) ──
@@ -3202,8 +3202,16 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // 로그인/로그아웃 버튼 이벤트 바인딩
   document.getElementById('login-btn')?.addEventListener('click', ()=>doSignIn());
   document.getElementById('logout-btn')?.addEventListener('click', ()=>doSignOut());
-  document.getElementById('confirm-ok')?.addEventListener('click', ()=>resolveConfirm(true));
-  document.getElementById('confirm-cancel')?.addEventListener('click', ()=>resolveConfirm(false));
+  document.getElementById('confirm-ok')?.addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('confirm-overlay').style.display='none';
+    var cb=_confirmCallback; _confirmCallback=null; if(cb) cb();
+  });
+  document.getElementById('confirm-cancel')?.addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('confirm-overlay').style.display='none';
+    _confirmCallback=null;
+  });
   const lb=document.getElementById('login-btn');
   if(lb) lb.innerHTML=`<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.34-8.16 2.34-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Google 계정으로 로그인`;
 
