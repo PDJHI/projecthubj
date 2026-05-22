@@ -2922,7 +2922,7 @@ document.addEventListener('click', e=>{
 });
 
 // ── 커스텀 확인 다이얼로그 (콜백 방식) ──
-let _confirmCallback = null;
+var _confirmCallback = null;
 function showConfirm(msg, sub='', btnText='삭제'){
   document.getElementById('confirm-msg').textContent = msg;
   document.getElementById('confirm-sub').textContent = sub||'';
@@ -2935,6 +2935,8 @@ function resolveConfirm(val){
   else _confirmCallback=null;
 }
 function closeConfirm(){ resolveConfirm(false); }
+window.resolveConfirm = resolveConfirm;
+window.closeConfirm = closeConfirm;
 
 // ── 실행 취소 (Undo) ──
 let _undoStack = null;
