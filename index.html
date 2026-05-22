@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0083)file:///C:/Users/%EC%A0%84%EC%95%84%EB%A6%BC/Downloads/project_dashboard%20(5).html -->
 <html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2192,9 +2191,25 @@ function openModal(type, id){
     title.textContent=p?'사업 수정':'새 사업 추가';
     const initMembers = (p?.members||[]);
     body.innerHTML=`
-
+      <div class="frow">
+        <div class="fg"><label class="fl">사업명 *</label><input class="fi" id="f-name" value="${esc(p?.name||'')}"></div>
+        <div class="fg"><label class="fl">카테고리</label><input class="fi" id="f-cat" value="${esc(p?.category||'')}"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">상태</label>
+          <select class="fi" id="f-st">
+            <option value="진행중" ${p?.status==='진행중'?'selected':''}>진행중</option>
+            <option value="계획중" ${p?.status==='계획중'?'selected':''}>계획중</option>
+            <option value="지연" ${p?.status==='지연'?'selected':''}>지연</option>
+            <option value="완료" ${p?.status==='완료'?'selected':''}>완료</option>
+            <option value="보류" ${p?.status==='보류'?'selected':''}>보류</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">진척률 <span id="pr-val" style="font-weight:700;color:var(--blue)">${p?.progress||0}%</span></label>
+          <input class="fi" type="range" id="f-pr" min="0" max="100" value="${p?.progress||0}" oninput="document.getElementById('pr-val').textContent=this.value+'%'">
+        </div>
+      </div>
       <div class="fg"><label class="fl">마감일</label><input class="fi" id="f-dl" type="date" value="${p?.deadline||getToday()}"></div>
-
       <div class="fg">
         <label class="fl">담당자</label>
         <div id="member-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;padding:6px 8px;border:.5px solid var(--border2);border-radius:var(--rs);background:var(--surface2);margin-bottom:6px">
@@ -2209,7 +2224,6 @@ function openModal(type, id){
           <button class="btn btn-sm btn-primary" type="button" onclick="addModalMember()"><i class="ti ti-plus"></i>추가</button>
         </div>
       </div>
-
       <div class="fg"><label class="fl">사업 설명</label><textarea class="fi" id="f-desc">${esc(p?.desc||'')}</textarea></div>
     `;
     foot.innerHTML=`<button class="btn" onclick="closeModal()">취소</button><button class="btn btn-primary" onclick="${p?`saveProjEdit('${p.id}')`:'saveProjAdd()'}">${p?'저장':'추가'}</button>`;
