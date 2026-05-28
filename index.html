@@ -1801,15 +1801,22 @@ function addRow(pid){
 function toggleDone(id, source){
   const t=D.tasks.find(x=>x.id===id); if(!t) return;
   if(source==='today'){
-    // 오늘 할 일에서는 todayDone 필드만 변경 (task.done 변경 안 함)
+    // 오늘 할 일에서 체크 → done과 todayDone 동시 변경
     t.todayDone = !t.todayDone;
-    save(); renderToday();
+    t.done = t.todayDone;
+    if(t.done && !t.doneDate) t.doneDate = TODAY;
+    if(!t.done) t.doneDate = '';
+    autoProgress(t.pid); save();
+    if(t.pid) rebuildTbody(t.pid);
+    renderToday(); syncOv();
     return;
   }
-  // 프로젝트 관리에서의 완료 처리
-  t.done=!t.done;
-  if(t.done&&!t.doneDate) t.doneDate=TODAY;
-  if(!t.done) t.doneDate='';
+  // 프로젝트 관리에서 체크 → done과 todayDone 동시 변경
+  t.done = !t.done;
+  if(t.done && !t.doneDate) t.doneDate = TODAY;
+  if(!t.done) t.doneDate = '';
+  // 오늘 투두에 등록된 항목이면 todayDone도 동기화
+  if(t.todayTodo) t.todayDone = t.done;
   autoProgress(t.pid); save();
   if(t.pid) rebuildTbody(t.pid);
   renderToday(); syncOv();
@@ -1817,7 +1824,12 @@ function toggleDone(id, source){
 function toggleTodo(id){
   const t=D.tasks.find(x=>x.id===id); if(!t) return;
   t.todayTodo=!t.todayTodo;
-  if(!t.todayTodo) t.todayDone=false; // 투두 해제 시 완료도 초기화
+  if(!t.todayTodo){
+    t.todayDone=false; // 투두 해제 시 완료도 초기화
+  } else {
+    // 투두 설정 시 이미 done 상태면 todayDone도 동기화
+    t.todayDone = t.done;
+  }
   save();
   if(t.pid) rebuildTbody(t.pid);
   renderToday();
@@ -2028,7 +2040,7 @@ function buildMemberDetail(name, mid, filter='undone'){
       const pname=t.pid?(D.projects.find(p=>p.id===t.pid)||{}).name||'':'-';
       const ov=t.deadline&&t.deadline<TODAY&&!t.done;
       return`<tr style="${t.done?'opacity:.55':''}">
-        <td style="padding:6px 8px;border-bottom:.5px solid var(--border);text-align:center"><div class="cb ${t.done?'on':''}" style="margin:0 auto" onclick="toggleDone('${t.id}','today');setMemberFilter('${mid}','${filter}')">${t.done?'<i class="ti ti-check" style="font-size:10.8px;color:#fff"></i>':''}</div></td>
+        <td style="padding:6px 8px;border-bottom:.5px solid var(--border);text-align:center"><div class="cb ${t.done?'on':''}" style="margin:0 auto" onclick="toggleDone('${t.id}');setMemberFilter('${mid}','${filter}')">${t.done?'<i class="ti ti-check" style="font-size:10.8px;color:#fff"></i>':''}</div></td>
         <td style="padding:6px 8px;border-bottom:.5px solid var(--border);${t.done?'text-decoration:line-through;color:var(--text3)':''}${t.pid?';cursor:pointer':''}${t.pid?';text-decoration-line:underline;text-decoration-style:dotted;text-decoration-color:var(--text3)':''}" onclick="${t.pid?`navToTask('${t.id}','${t.pid}')`:''}">${esc(t.title)||'-'}</td>
         <td style="padding:6px 8px;border-bottom:.5px solid var(--border);color:var(--text2)">${esc(pname)}</td>
         <td style="padding:6px 8px;border-bottom:.5px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;${ov?'color:var(--red)':''}">${t.deadline||'-'}${t.deadline&&!t.done?' '+ddayHtml(t.deadline):''}</td>
